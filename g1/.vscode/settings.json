@@ -1,0 +1,4 @@
+{
+    "java.format.settings.url": "eclipse-formatter.xml",
+    "compile-hero.disable-compile-files-on-did-save-code": false
+}
