@@ -6,6 +6,8 @@ import java.util.Random;
 
 public class Workload {
 
+  private static int MAX = (int) Math.pow(2, 10);
+
   private static String getString(int length) {
     String alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -23,7 +25,6 @@ public class Workload {
 
   public static void populate(Random rand, Connection c) throws Exception {
     Statement s = c.createStatement();
-    int MAX = (int) Math.pow(2, 10);
 
     s.executeUpdate("drop table if exists client");
     s.executeUpdate("drop table if exists product");
@@ -53,7 +54,6 @@ public class Workload {
 
   public static void transaction(Random rand, Connection c) throws Exception {
     Statement s = c.createStatement();
-    int MAX = (int) Math.pow(2, 10);
     int type = rand.nextInt(3);
 
     int invoiceId = rand.nextInt(Integer.MAX_VALUE) | rand.nextInt(Integer.MAX_VALUE);
