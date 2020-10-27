@@ -46,6 +46,7 @@ public class Benchmark extends Thread {
     public void run() {
         try {
             Connection c = DriverManager.getConnection(options.database, options.user, options.passwd);
+
             while(!isStopped()) {
                 long before = System.nanoTime();
                 boolean success = true;
@@ -86,10 +87,10 @@ public class Benchmark extends Thread {
 
     public static void main(String[] args) throws Exception {
 
-        System.out.println("oi");;
         JCommander parser = JCommander.newBuilder()
         .addObject(options)
         .build();
+
         
         try {
             parser.parse(args);
@@ -107,7 +108,5 @@ public class Benchmark extends Thread {
             populate();
         if (options.execute)
             execute();
-
-        System.out.println("OIII");
     }
 }
