@@ -6,7 +6,7 @@ import java.util.Random;
 
 public class Workload {
 
-  private static int MAX = (int) Math.pow(2, 15);
+  private static int MAX = (int) Math.pow(2, 13);
   private static int STRING_SIZE = 8100; // Quase 8k
 
   private static String getString(int length) {
@@ -39,10 +39,7 @@ public class Workload {
     s.executeUpdate("create index p1 on product(id);");
     s.executeUpdate("create table invoice (id int, productId int, clientId int, data varchar);");
     s.executeUpdate("create index v1 on invoice(productid,clientid);");
-    s.executeUpdate("create materialized view top10view as " +
-      "select v.productid,count(v.productid) from invoice v group by v.productid " +
-      "order by count(v.productid) desc limit 10;");
-
+    
     for (int i = 0; i < MAX; i++) {
       int clientId = i;
       String address = getString(30);
@@ -56,7 +53,7 @@ public class Workload {
       String data = getString(STRING_SIZE);
       s.executeUpdate("insert into product values('" + productId + "', '" + description + "', '" + data + "');");
     }
-
+    
     for (int i = 0; i < MAX; i++) {
       int invoiceId = i;
       int productId = rand.nextInt(MAX) | rand.nextInt(MAX);
@@ -65,9 +62,13 @@ public class Workload {
       s.executeUpdate("insert into invoice values ('" + invoiceId + "', '" + productId + "', '" + clientId + "', '" + data + "');");
     }
 
+    s.executeUpdate("create materialized view top10view as " +
+      "select v.productid,count(v.productid) from invoice v group by v.productid " +
+      "order by count(v.productid) desc limit 10;");
+    
     s.close();
   }
-
+  
   public static void transaction(Random rand, Connection c) throws Exception {
     Statement s = c.createStatement();
     int type = rand.nextInt(3);
@@ -78,7 +79,8 @@ public class Workload {
 
     switch (type) {
       case 0:
-        s.executeUpdate("insert into invoice values ('" + invoiceId + "', '" + productId + "', '" + clientId + "');");
+        String data = getString(STRING_SIZE);
+        s.executeUpdate("insert into invoice values ('" + invoiceId + "', '" + productId + "', '" + clientId + "', '" + data + "');");
         break;
       case 1:
         s.executeQuery(

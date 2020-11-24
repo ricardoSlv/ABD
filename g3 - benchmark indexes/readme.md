@@ -2,9 +2,9 @@
 mvn clean compile exec:java -Dexec.mainClass=abd.Benchmark -Dexec.args="-d jdbc:postgresql://localhost/abd -U abduser -P segredo -p -x"
 
 # Get Table Sizes
-SELECT pg_size_pretty( pg_total_relation_size('invoice')),
-pg_size_pretty( pg_total_relation_size('client')),
-pg_size_pretty( pg_total_relation_size('product'));
+SELECT pg_size_pretty( pg_total_relation_size('invoice')) as inv,
+pg_size_pretty( pg_total_relation_size('client')) as cli,
+pg_size_pretty( pg_total_relation_size('product')) as prod;
 
 # Queries
 
