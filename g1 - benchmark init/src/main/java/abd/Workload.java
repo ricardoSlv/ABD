@@ -26,7 +26,6 @@ public class Workload {
 
   public static void populate(Random rand, Connection c) throws Exception {
     Statement s = c.createStatement();
-
     s.executeUpdate("drop table if exists client");
     s.executeUpdate("drop table if exists product");
     s.executeUpdate("drop table if exists invoice");
