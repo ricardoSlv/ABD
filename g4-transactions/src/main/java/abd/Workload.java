@@ -111,61 +111,74 @@ public class Workload {
 
         if (ordering) {
 
-            //TODO Fix multiple orders for same present error still being possible
-            //After inserting, see if there is more than 1 order for the product, and rollback if so;
+            // TODO Fix multiple orders for same present error still being possible
+            // After inserting, see if there is more than 1 order for the product, and
+            // rollback if so;
 
-            // To see commited changed during my transaction and be able to rollback
-            c.setTransactionIsolation(2);
-            ResultSet result = s
-                    .executeQuery(String.format("select p.id,p.stock,p.max from product p where p.stock<3", productId));
-            if (result.next()) {
-
-                int prodId = result.getInt("id");
-                int stock = result.getInt("stock");
-                int max = result.getInt("max");
-
-                ResultSet result2 = s.executeQuery(String
-                        .format("select count(*) as totalOrders from orders ord where ord.productId=%d", productId));
-                result2.next();
-                int ordersForProd = result2.getInt("totalOrders");
-                System.out.println("Curr orders: " + ordersForProd);
-
-                if (ordersForProd == 0){
-                    int status = s.executeUpdate(String.format("insert into orders values (%d, %d, '%s', %d)", orderId, prodId,
-                            supplier, max - stock));
-                    ResultSet result3 = s.executeQuery(String
-                        .format("select count(*) as totalOrders from orders ord where ord.productId=%d", productId));
-                    result3.next();
-
-                    int ordersForProdAfterOrder = result3.getInt("totalOrders");
-                    if(ordersForProdAfterOrder>1)
-                        c.rollback();
-                    else   
-                        System.out.println("Ordered: "+prodId+ " Status: "+status);
-                }
-                else
-                    System.out.println("There was an order for: "+prodId);
-            }
+            // So that i dont commit if orders have been changed during my execution
             c.commit();
-            c.setTransactionIsolation(2);
+            c.setTransactionIsolation(8);
+            ResultSet result = s.executeQuery("select p.id, p.stock, p.max from product p where p.stock<p.min "+
+            "and (select coalesce(sum(items),0) from orders where productId = p.id) + p.stock < p.max");
 
+            if (result.next()) {
+                    
+                    int prodId = result.getInt("id");
+                    int stock = result.getInt("stock");
+                    int max = result.getInt("max");
+                    
+                    ResultSet totOrdsRes = s.executeQuery(String.format("select sum(items) as tot from orders where productId = %d", prodId));
+                    totOrdsRes.next();
+                    int totOrds = totOrdsRes.getInt("tot");
+
+                //ResultSet result2 = s.executeQuery(String.format("select count(*) as totalOrders from orders ord where ord.productId=%d", productId));
+                //result2.next();
+                //int ordersForProd = result2.getInt("totalOrders");
+                //System.out.println("Curr orders: " + ordersForProd);
+
+                //if (ordersForProd == 0) {
+                //System.out.println("There were "+totOrds+" orders for "+ prodId);
+                s.executeUpdate(String.format("insert into orders values (%d, %d, '%s', %d)", orderId,prodId, supplier, max - totOrds - stock));
+                    //ResultSet result3 = s.executeQuery(String.format("select count(*) as totalOrders from orders ord where ord.productId=%d", productId));
+                    //result3.next();
+
+                    //int ordersForProdAfterOrder = result3.getInt("totalOrders");
+                    //System.out.println("Orders after query: " + ordersForProdAfterOrder);
+                    //if (ordersForProdAfterOrder > 1)
+                    //    c.rollback();
+                    //else
+                    //    System.out.println("Ordered: " + prodId + " Status: " + status);
+                //} else
+                //    System.out.println("There was an order for: " + prodId);
+                c.commit();
+                c.setTransactionIsolation(2);
+
+            }
         }
 
-        if(delivering){
-            ResultSet result = s
-                    .executeQuery(String.format("select productId, items from orders ord where ord.supplier='%s'", supplier));
-            while(result.next()){
+        if (delivering) {
+                
+            // So that i dont commit if orders have been changed during my execution
+            c.commit();
+            c.setTransactionIsolation(8);
+                
+            ResultSet result = s.executeQuery(
+                    String.format("select id, productId, items from orders ord where ord.supplier='%s'", supplier));
+            while (result.next()) {
+                int orderIdRes = result.getInt("id");
                 int prodId = result.getInt("productId");
                 int itemsOrdered = result.getInt("items");
                 Statement s2 = c.createStatement();
                 ResultSet result2 = s2.executeQuery(String.format("select stock from product where id=%d", prodId));
                 result2.next();
                 int currStock = result2.getInt("stock");
-                s2.executeUpdate(String.format("update product set stock=%d where id=%d", currStock+itemsOrdered, prodId));
+                s2.executeUpdate(String.format("update product set stock=%d where id=%d", currStock + itemsOrdered, prodId));
                 s2.executeUpdate(String.format("delete from orders where supplier='%s'", supplier));
-                System.out.println("Supplied: "+prodId);
+                System.out.println(orderIdRes + " Supplied: " + prodId);
                 s2.close();
             }
+            c.commit();
+            c.setTransactionIsolation(2);
         }
 
         switch (type) {
@@ -187,9 +200,7 @@ public class Workload {
                     s.executeUpdate(String.format("insert into invoiceLine values ('%d', '%d', '%d', '%s');",
                             invoiceLineId, invoiceId, productId, data));
                 }
-
-                //System.out.println(currStock);
-
+                // System.out.println(currStock);
                 // long i2=System.currentTimeMillis();
                 // System.out.println("0 -> " + (i2-i1));
                 break;
@@ -199,10 +210,8 @@ public class Workload {
                 s.executeQuery(" select distinct p.description" + " from product p, invoice v, invoiceline ivl"
                         + " where v.clientid = " + clientId + " and ivl.productId = p.id"
                         + " and ivl.invoiceId = v.id;");
-
                 // long i4=System.currentTimeMillis();
                 // System.out.println("1 -> " + (i4-i3));
-
                 break;
             case 2:
                 // long i5=System.currentTimeMillis();
